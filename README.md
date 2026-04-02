@@ -15,3 +15,47 @@ Install dependencies using:
 
 ```bash
 pip install -r requirements.txt
+
+## Dataset
+
+This project uses the **EWS (Eschikon Wheat Segmentation)** dataset, which is designed for crop segmentation tasks in real-world agricultural environments.
+
+- The dataset contains **190 RGB images** (350 × 350 resolution)
+- Each image is paired with a **manually annotated binary mask**
+  - 1 → crop (wheat)
+  - 0 → background (soil)
+
+The dataset is already split into **training, validation, and test sets**, and it is important not to mix these subsets during experiments to avoid data leakage. :contentReference[oaicite:0]{index=0}  
+
+---
+
+### 🔗 Download
+
+The dataset can be downloaded from:
+
+https://www.research-collection.ethz.ch/entities/researchdata/165d22fc-6b0f-4fc3-a441-20d8bdc50a70
+
+---
+
+### ⚠️ Notes
+
+- The dataset is **not included in this repository** due to size constraints  
+- Please download and extract it locally under the `data/` directory  
+- Make sure to follow the correct train/validation/test split when running experiments  
+
+---
+
+### 📁 Expected Data Structure
+
+After extraction, the dataset should be organized as follows:
+
+data/
+train/
+images/
+masks/
+val/
+images/
+masks/
+test/
+images/
+masks/

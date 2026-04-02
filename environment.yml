@@ -1,0 +1,9 @@
+name: comp9517
+dependencies:
+  - python=3.10
+  - numpy
+  - opencv
+  - scikit-learn
+  - matplotlib
+  - pytorch
+  

@@ -165,16 +165,16 @@ def extract_features(img_bgr: np.ndarray) -> np.ndarray:
 
     # stack all features: shape (H, W, 13)
     features = np.stack([
-        r_ch, g_ch, b_ch,                  # RGB (3)
-        hsv_float[:, :, 0],                # H (1)
-        hsv_float[:, :, 1],                # S (1)
-        hsv_float[:, :, 2],                # V (1)
-        exg,                                # ExG (1)
-        exr,                                # ExR (1)
-        exg_minus_exr,                      # ExG - ExR (1)
-        local_mean,                         # local mean of G (1)
-        local_std,                          # local std of G (1)
-        g_blurred,                          # smoothed G (1)
+        r_ch, g_ch, b_ch,# RGB (3)
+        hsv_float[:, :, 0], # H (1)
+        hsv_float[:, :, 1], # S (1)
+        hsv_float[:, :, 2], # V (1)
+        exg, # ExG (1)
+        exr, # ExR (1)
+        exg_minus_exr, # ExG - ExR (1)
+        local_mean, # local mean of G (1)
+        local_std, # local std of G (1)
+        g_blurred, # smoothed G (1)
         lbp_norm,                           # LBP (1)
     ], axis=-1)
 
@@ -198,9 +198,9 @@ def sample_pixels(features_2d, labels_1d, samples_per_image=2000, random_seed=42
 def train_random_forest(train_dir: Path, val_dir: Path,
                         samples_per_image=2000, random_seed=42):
 
-    print("=== Training Phase ===")
+    print("---- Training Phase “---")
 
-    # --- collect training data ---
+    # collect training data
     train_pairs = image_to_mask(train_dir)
     print(f"Found {len(train_pairs)} training image-mask pairs")
 
@@ -418,11 +418,11 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
         json.dump(summary, f, indent=2)
 
     print(f"\n=== Results Summary ===")
-    print(f"  Average Precision: {summary['metrics']['precision']:.4f}")
-    print(f"  Average Recall:    {summary['metrics']['recall']:.4f}")
-    print(f"  Average F1:        {summary['metrics']['f1']:.4f}")
-    print(f"  Average IoU:       {summary['metrics']['iou']:.4f}")
-    print(f"  Avg predict time:  {summary['metrics']['average_predict_time_per_image']:.3f}s")
+    print(f" Average Precision: {summary['metrics']['precision']:.4f}")
+    print(f" Average Recall:    {summary['metrics']['recall']:.4f}")
+    print(f" Average F1:        {summary['metrics']['f1']:.4f}")
+    print(f" Average IoU:       {summary['metrics']['iou']:.4f}")
+    print(f" Average predict time:  {summary['metrics']['average_predict_time_per_image']:.3f}s")
     print(f"\nResults saved to {output_root}")
 
 

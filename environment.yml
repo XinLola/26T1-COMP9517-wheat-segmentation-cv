@@ -1,9 +1,17 @@
 name: comp9517
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
 dependencies:
   - python=3.10
   - numpy
   - opencv
   - scikit-learn
+  - scikit-image
   - matplotlib
+  - pillow
+  - tqdm
+  - joblib
   - pytorch
-  
+  - torchvision

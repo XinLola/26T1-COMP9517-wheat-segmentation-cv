@@ -207,3 +207,15 @@ marimo/_lsp/
 __marimo__/
 .DS_Store
 **/.DS_Store
+
+# Trained model weights (per project spec, do not submit models)
+*.pt
+*.pth
+*.joblib
+output/**/*.pt
+output/**/*.pth
+output/**/*.joblib
+
+# VSCode workspace
+.vscode/
+

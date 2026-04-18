@@ -1,0 +1,16 @@
+{
+  "selected_final_setting": "postprocess_on",
+  "baseline_params": {
+    "classifier": "svm",
+    "C": 1.0,
+    "gamma": "scale"
+  },
+  "rf_params": {
+    "classifier": "rf",
+    "n_estimators": 400,
+    "max_depth": null
+  },
+  "baseline_train_time_sec": 16.069625708041713,
+  "rf_train_time_sec": 38.606030000024475,
+  "has_cv2": true
+}

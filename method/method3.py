@@ -28,7 +28,8 @@ def image_to_mask(split_dir: Path):
 
 
 def compute_metrics(pred_mask: np.ndarray, gt_mask: np.ndarray) -> dict:
-
+    # Internal convention: pred_mask > 0  means predicted as plant (foreground)
+    # EWS dataset convention: gt_mask == 0 (black) means plant (foreground)
     pred = (pred_mask > 0)    # True = predicted as plant
     gt = (gt_mask == 0)       # True = actually plant
 
@@ -53,10 +54,11 @@ def visuals(img_bgr: np.ndarray, pred_mask: np.ndarray, gt_mask: np.ndarray) -> 
 
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
-    pred_display = np.where(pred_mask > 0, 0, 255).astype(np.uint8)
+    # Display convention: black (0) = plant for both pred and gt (matches EWS saved format)
+    pred_display = np.where(pred_mask > 0, 0, 255).astype(np.uint8)  # invert internal: 255->0 (plant)
     pred_rgb = cv2.cvtColor(pred_display, cv2.COLOR_GRAY2RGB)
 
-    gt_display = np.where(gt_mask == 0, 0, 255).astype(np.uint8)
+    gt_display = np.where(gt_mask == 0, 0, 255).astype(np.uint8)     # gt already: 0=plant, keep as-is
     gt_rgb = cv2.cvtColor(gt_display, cv2.COLOR_GRAY2RGB)
 
     panels = [img_rgb, pred_rgb, gt_rgb]
@@ -210,7 +212,7 @@ def train_random_forest(train_dir: Path, val_dir: Path,
         #extract feature
         feats = extract_features(img_bgr)
 
-        # create labels: gt_mask == 0 means plant (label 1), otherwise soil (label 0)
+        # EWS dataset convention: gt_mask == 0 (black) = plant → label 1 (foreground)
         labels = (gt_mask.flatten() == 0).astype(np.int32)
 
         # sample to keep training size reasonable
@@ -242,6 +244,7 @@ def train_random_forest(train_dir: Path, val_dir: Path,
         img_bgr = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
         gt_mask = cv2.imread(str(gt_path), cv2.IMREAD_GRAYSCALE)
         feats = extract_features(img_bgr)
+        # EWS dataset convention: gt_mask == 0 (black) = plant → label 1 (foreground)
         labels = (gt_mask.flatten() == 0).astype(np.int32)
         # sample validation too (otherwise it's too many pixels)
         sampled_feats, sampled_labels = sample_pixels(
@@ -314,8 +317,8 @@ def predict_image(model, img_bgr: np.ndarray) -> np.ndarray:
     # predict
     pred_labels = model.predict(features)
 
-    # reshape back to image
-    pred_mask = pred_labels.reshape(h, w).astype(np.uint8) * 255
+    # Internal convention: label 1 = plant (foreground) → mapped to 255
+    pred_mask = pred_labels.reshape(h, w).astype(np.uint8) * 255  # 255 = plant
 
     # optional: clean up with morphological operations
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
@@ -375,7 +378,8 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
         elapsed = time.perf_counter() - start
         total_predict_time += elapsed
 
-        # save predicted mask (invert so foreground = black like gt)
+        # Save using EWS dataset convention: 0 (black) = plant, 255 (white) = background
+        # bitwise_not converts internal (255=plant) → saved (0=plant)
         cv2.imwrite(str(masks_dir / img_path.name), cv2.bitwise_not(pred_mask))
 
         # compute metrics

@@ -20,6 +20,8 @@ def image_to_mask(split_dir: Path):
     return both
 
 def compute_metrics(pred_mask: np.ndarray, gt_mask: np.ndarray) -> dict:
+    # Internal convention: pred_mask > 0  means predicted as plant (foreground)
+    # EWS dataset convention: gt_mask == 0 (black) means plant (foreground)
     pred = (pred_mask > 0)
     gt = (gt_mask == 0)
 
@@ -41,9 +43,10 @@ def compute_metrics(pred_mask: np.ndarray, gt_mask: np.ndarray) -> dict:
 
 def visuals(img_bgr: np.ndarray, pred_mask: np.ndarray, mask: np.ndarray) -> np.ndarray:
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-    pred_binary = np.where(pred_mask > 0, 0, 255).astype(np.uint8)
+    # Display convention: black (0) = plant for both pred and gt (matches EWS saved format)
+    pred_binary = np.where(pred_mask > 0, 0, 255).astype(np.uint8)  # invert internal: 255->0 (plant)
     pred_rgb = cv2.cvtColor(pred_binary, cv2.COLOR_GRAY2RGB)
-    binary = np.where(mask == 0, 0, 255).astype(np.uint8)
+    binary = np.where(mask == 0, 0, 255).astype(np.uint8)           # gt already: 0=plant, keep as-is
     rgb = cv2.cvtColor(binary, cv2.COLOR_GRAY2RGB)
     panels = [img_rgb, pred_rgb, rgb]
     titles = ["Original image", "Prediction mask", "Actual mask"]
@@ -111,6 +114,7 @@ def main(split_dir: Path, output_root: Path, grabcut_iterations: int = 6, erosio
             cv2.GC_INIT_WITH_MASK
         )
 
+        # Internal convention: 255 = plant (foreground), 0 = background
         pred_mask = np.where(
             (gc_mask == cv2.GC_FGD) | (gc_mask == cv2.GC_PR_FGD),
             255,
@@ -134,6 +138,8 @@ def main(split_dir: Path, output_root: Path, grabcut_iterations: int = 6, erosio
         elapsed = time.perf_counter() - start
         total_time += elapsed
 
+        # Save using EWS dataset convention: 0 (black) = plant, 255 (white) = background
+        # bitwise_not converts internal (255=plant) → saved (0=plant)
         cv2.imwrite(str(masks_dir / img_path.name), cv2.bitwise_not(pred_mask))
 
         metrics = compute_metrics(pred_mask, gt_mask)

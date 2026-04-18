@@ -273,7 +273,7 @@ def train_random_forest(train_dir: Path, val_dir: Path,
     ]
 
     best_model = None
-    best_f1 = 0.0
+    best_iou = 0.0
     best_params = None
 
     for params in param_grid:
@@ -297,15 +297,16 @@ def train_random_forest(train_dir: Path, val_dir: Path,
         prec = tp / (tp + fp) if (tp + fp) > 0 else 0
         rec = tp / (tp + fn) if (tp + fn) > 0 else 0
         f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0
+        iou = tp / (tp + fp + fn) if (tp + fp + fn) > 0 else 0
 
-        print(f"    Precision={prec:.4f}, Recall={rec:.4f}, F1={f1:.4f}")
+        print(f"    Precision={prec:.4f}, Recall={rec:.4f}, F1={f1:.4f}, IoU={iou:.4f}")
 
-        if f1 > best_f1:
-            best_f1 = f1
+        if iou > best_iou:
+            best_iou = iou
             best_model = clf
             best_params = params
 
-    print(f"\nBest params: {best_params}, Best val F1: {best_f1:.4f}")
+    print(f"\nBest params: {best_params}, Best val IoU: {best_iou:.4f}")
     return best_model
 
 

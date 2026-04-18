@@ -167,7 +167,7 @@ def main(split_dir: Path, output_root: Path, grabcut_iterations: int = 6, erosio
         json.dump(summary, f, indent=2)
         
 if __name__ == "__main__":
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
     path = project_root / "data" / "test"
     output = project_root / "output" / "method1"
     main(split_dir=path, output_root=output)

@@ -428,7 +428,7 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
 
 if __name__ == "__main__":
     # get the project root directory (one level up from method/)
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
 
     train_path = project_root / "data" / "train"
     val_path = project_root / "data" / "validation"

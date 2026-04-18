@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import time
@@ -281,7 +281,9 @@ def read_mask(path: Path, cfg: Method2Config) -> np.ndarray:
         mask = _resize_image(mask, cfg.image_size, is_mask=True)
 
     threshold = cfg.mask_threshold * (255.0 if mask.max() > 1.0 else 1.0)
-    binary = (mask > threshold).astype(np.uint8)
+    # EWS dataset convention: black (0) = plant (foreground), white (255) = background
+    # So plant pixels have mask value < threshold → label 1 (positive / foreground)
+    binary = (mask <= threshold).astype(np.uint8)
     return binary
 
 
@@ -523,7 +525,9 @@ def save_mask(pred_mask: np.ndarray, out_path: Path, cfg: Optional[Method2Config
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     binary = (pred_mask > 0).astype(np.uint8)
-    encoded = (binary * int(out_cfg.output_foreground_value)).astype(np.uint8)
+    # Save using EWS dataset convention: 0 (black) = plant, 255 (white) = background
+    # This is the inverse of the internal binary representation (1=plant)
+    encoded = np.where(binary > 0, 0, 255).astype(np.uint8)
 
     if HAS_CV2:
         cv2.imwrite(str(out_path), encoded)

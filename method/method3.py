@@ -102,7 +102,8 @@ def compute_lbp(gray, x, y):
 def compute_lbp_image(gray):
  
     h, w = gray.shape
-    lbp = np.zeros((h, w), dtype=np.uint8)
+    # Use int16 to avoid overflow during the 8-step bit accumulation (max value = 255)
+    lbp = np.zeros((h, w), dtype=np.int16)
 
     #pad the image with zeros on all sides
     padded = np.pad(gray, 1, mode='constant', constant_values=0)
@@ -116,9 +117,10 @@ def compute_lbp_image(gray):
 
     for i, (dy, dx) in enumerate(offsets):
         neighbour = padded[1+dy:h+1+dy, 1+dx:w+1+dx].astype(np.int16)
-        lbp += ((neighbour >= centre).astype(np.uint8)) << i
+        lbp += ((neighbour >= centre).astype(np.int16)) << i
 
-    return lbp
+    return lbp.astype(np.uint8)  # safe: accumulated value is in [0, 255]
+
 
 
 def extract_features(img_bgr: np.ndarray) -> np.ndarray:

@@ -165,6 +165,9 @@ def main(split_dir: Path, output_root: Path, grabcut_iterations: int = 6, erosio
 
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
-path = Path("data/test")
-output = Path("output/method1")
-main(split_dir=path, output_root=output)
+        
+if __name__ == "__main__":
+    project_root = Path(__file__).resolve().parent.parent
+    path = project_root / "data" / "test"
+    output = project_root / "output" / "method1"
+    main(split_dir=path, output_root=output)

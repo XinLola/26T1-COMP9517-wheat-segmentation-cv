@@ -245,7 +245,7 @@ def evaluate_iou(model: nn.Module, loader: DataLoader, device: torch.device) -> 
 
 # how to training loop for U-Net model
 def train_unet(train_dir: Path, val_dir: Path,
-               epochs: int = 60,
+               epochs: int = 25,
                batch_size: int = 8,
                lr: float = 1e-3,
                device: torch.device = None,
@@ -335,7 +335,7 @@ def predict_image(model: nn.Module, img_bgr: np.ndarray, device: torch.device) -
 
 #main and summary generation
 def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
-         epochs: int = 60, batch_size: int = 8, lr: float = 1e-3):
+         epochs: int = 25, batch_size: int = 8, lr: float = 1e-3):
 
     masks_dir = output_root / "masks"
     visuals_dir = output_root / "visuals"
@@ -430,4 +430,4 @@ if __name__ == "__main__":
 
     main(train_dir=train_path, val_dir=val_path,
          test_dir=test_path, output_root=output,
-         epochs=60, batch_size=8, lr=1e-3)
+         epochs=25, batch_size=8, lr=1e-3)

@@ -495,11 +495,29 @@ def main(train_dir, val_dir, test_dir, output_root, samples_per_image=2000):
     _write_csv(output_root / "test_details_final.csv", details)
     
     write_json = lambda p, d: p.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
-    write_json(output_root / "report_for_D.json", {
-        "method": "Method 3 (Machine Learning: Random Forest + Features)",
-        "train": {"samples_per_image": samples_per_image},
-        "test": {"baseline": baseline_summary, "robustness": robustness_rows},
-        "timing": {"train_time_sec": train_time, "test_time_mean_sec": baseline_summary["test_time_sec_mean"]}
+    write_json(output_root / "evaluation_summary.json", {
+        "method": "Method 3 (ML: Random Forest + Features)",
+        "type": "ml",
+
+        "train": {
+            "train_time_sec": train_time,
+            "params": {
+                "samples_per_image": samples_per_image
+            }
+        },
+
+        "validation": None,
+
+        "test": {
+            "baseline": baseline_summary,
+            "robustness": robustness_rows,
+            "extra": {}
+        },
+
+        "timing": {
+            "train_time_sec": train_time,
+            "test_time_mean_sec": baseline_summary["test_time_sec_mean"]
+        }
     })
     print(f"[INFO] Method 3 complete. Results saved to {output_root}")
 

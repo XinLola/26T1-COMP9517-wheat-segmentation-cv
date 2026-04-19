@@ -270,13 +270,22 @@ def main(split_dir: Path, output_root: Path):
     _write_csv(output_root / "test_details_final.csv", details)
     
     write_json = lambda path, payload: path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    write_json(output_root / "report_for_D.json", {
+    
+    write_json(output_root / "evaluation_summary.json", {
         "method": "Method 1 (Unsupervised: ExG + GrabCut)",
+        "type": "unsupervised",
+
+        "train": None,
+        "validation": None,
+
         "test": {
             "baseline": baseline_summary,
             "robustness": robustness_rows,
+            "extra": {}
         },
+
         "timing": {
+            "train_time_sec": None,
             "test_time_mean_sec": baseline_summary["test_time_sec_mean"]
         }
     })

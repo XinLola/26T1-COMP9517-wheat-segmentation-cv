@@ -397,23 +397,39 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
               f"IoU={metrics['iou']:.4f}, Time={elapsed:.3f}s")
 
     summary = {
-        "method": "U-Net (deep learning)",
-        "backbone": "Custom U-Net, base=32, BCE+Dice loss, Adam + cosine LR",
-        "augmentation": "random flips, random 90-deg rotations, brightness jitter",
-        "train_time_sec": train_time,
-        "epochs": epochs,
-        "batch_size": batch_size,
-        "learning_rate": lr,
-        "metrics": {
-            "precision": float(np.mean([r["precision"] for r in results])),
-            "recall": float(np.mean([r["recall"] for r in results])),
-            "f1": float(np.mean([r["f1"] for r in results])),
-            "iou": float(np.mean([r["iou"] for r in results])),
-            "test_time_sec_mean": total_predict_time / len(test_pairs),
+        "method": "Method 4 (Deep Learning: U-Net)",
+        "type": "dl",
+
+        "train": {
+            "train_time_sec": train_time,
+            "params": {
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "learning_rate": lr
+            }
         },
+
+        "validation": None,
+
+        "test": {
+            "baseline": {
+                "precision_mean": float(np.mean([r["precision"] for r in results])),
+                "recall_mean": float(np.mean([r["recall"] for r in results])),
+                "f1_mean": float(np.mean([r["f1"] for r in results])),
+                "iou_mean": float(np.mean([r["iou"] for r in results])),
+                "test_time_mean_sec": total_predict_time / len(test_pairs),
+            },
+            "robustness": [],
+            "extra": {}
+        },
+
+        "timing": {
+            "train_time_sec": train_time,
+            "test_time_mean_sec": total_predict_time / len(test_pairs)
+        }
     }
 
-    with open(metrics_path, "w", encoding="utf-8") as f:
+    with open(output_root / "evaluation_summary.json", "w") as f:
         json.dump(summary, f, indent=2)
 
     print(f"\n=== Results Summary ===")

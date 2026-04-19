@@ -1172,32 +1172,31 @@ def main() -> None:
     )
 
     # One compact hand-off for member D.
-    write_json(
-        output_root / "report_for_D.json",
-        {
-            "train_params": {
-                "svm": baseline_params,
-                "rf": rf_params,
-                "final_selected": improvement_selected,
-            },
-            "validation": {
-                "svm": baseline_val_metrics,
-                "rf": rf_val_metrics,
-            },
-            "test": {
-                "svm_baseline": baseline_test_summary,
-                "svm_final": final_test_summary,
-                "rf_compare": rf_test_summary,
-                "robustness": robustness_rows,
-                "sensitivity": sensitivity_rows,
-            },
-            "timing": {
-                "svm_train_time_sec": baseline_train_time,
-                "rf_train_time_sec": rf_train_time,
-                "svm_final_test_time_mean_sec": final_test_summary["test_time_sec_mean"],
-            },
+    write_json(output_root / "evaluation_summary.json", {
+        "method": "Method 2 (ML: SVM + Features)",
+        "type": "ml",
+
+        "train": {
+            "train_time_sec": baseline_train_time,
+            "params": baseline_params
         },
-    )
+
+        "validation": baseline_val_metrics,
+
+        "test": {
+            "baseline": final_test_summary,
+            "robustness": robustness_rows,
+            "extra": {
+                "rf_compare": rf_test_summary,
+                "sensitivity": sensitivity_rows
+            }
+        },
+
+        "timing": {
+            "train_time_sec": baseline_train_time,
+            "test_time_mean_sec": final_test_summary["test_time_sec_mean"]
+        }
+    })
 
     print("[INFO] Method2 experiments complete.")
     print(f"Output root: {output_root.resolve()}")

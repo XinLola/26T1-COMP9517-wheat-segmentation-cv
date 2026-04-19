@@ -1,9 +1,9 @@
 name: comp9517
+channels:
+  - conda-forge
+  - defaults
 dependencies:
   - python=3.10
-  - numpy
-  - opencv
-  - scikit-learn
-  - matplotlib
-  - pytorch
-  
+  - pip
+  - pip:
+    - -r requirements.txt

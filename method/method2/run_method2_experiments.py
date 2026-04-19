@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import csv
@@ -91,12 +91,12 @@ def _failure_reason(metric: Dict[str, Any]) -> str:
     r = float(metric["recall"])
     iou = float(metric["iou"])
     if r < 0.55 and p >= 0.70:
-        return "欠分割倾向：可能边界断裂或低对比区域漏检"
+        return "Under-segmentation: Possible broken boundaries or missing detection in low-contrast areas."
     if p < 0.55 and r >= 0.70:
-        return "过分割倾向：可能将土壤纹理误检为作物"
+        return "Over-segmentation: Possible misclassification of soil texture as crop."
     if iou < 0.40 and abs(p - r) < 0.15:
-        return "整体混淆：可能受光照变化或噪声影响"
-    return "复合失效：背景复杂度与特征可分性不足"
+        return "Total confusion: Likely affected by lighting changes or severe noise."
+    return "Complex failure: Insufficient feature separability and high background complexity."
 
 
 def _save_failure_overlay(

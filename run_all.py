@@ -1,16 +1,58 @@
 """
 Unified Evaluation Runner - Wheat Segmentation CV Project
 =========================================================
+
+This script runs multiple segmentation methods (Method 1–4),
+captures logs, tracks progress, and estimates remaining time.
+
+---------------------------------------------------------
 Usage:
-  python run_all.py
-  python run_all.py --methods 2
-  python run_all.py --methods 1 3 4
-  python run_all.py --methods 2 4
-  python run_all.py --skip 2
-  python run_all.py --continue-on-error
-  python run_all.py --dry-run
-  python run_all.py --methods 2 --dataset-root data
-  python run_all.py --fast
+
+# Run all methods (recommended)
+python run_all.py
+
+# Fast mode (for quick debugging)
+python run_all.py --fast
+
+# Run specific methods
+python run_all.py --methods 1 2
+python run_all.py --methods 2 4
+
+# Skip methods
+python run_all.py --skip 4
+
+# Continue even if one method fails
+python run_all.py --continue-on-error
+
+# Dry run (only print commands)
+python run_all.py --dry-run
+
+# Specify dataset root (for Method2)
+python run_all.py --dataset-root data
+
+---------------------------------------------------------
+Outputs:
+
+output/
+ ├── logs/
+ │    ├── method1.log
+ │    ├── method2.log
+ │    ├── method3.log
+ │    ├── method4.log
+ │
+ ├── run_summary.json
+
+---------------------------------------------------------
+Tips:
+
+- If terminal shows no output, check logs:
+    tail -f output/logs/method2.log
+
+- Fast mode reduces:
+    - Method2 image size
+    - Method4 epochs
+
+---------------------------------------------------------
 """
 
 import argparse
@@ -22,41 +64,39 @@ import json
 
 
 METHODS = {
-    1: {
-        "name": "Method 1 (ExG + GrabCut)",
-        "script": "method/method1/method1.py",
-    },
-    2: {
-        "name": "Method 2 (HSV+LBP+Gabor + SVM/RF)",
-        "script": "method/method2/method2.py",
-    },
-    3: {
-        "name": "Method 3 (Random Forest)",
-        "script": "method/method3/method3.py",
-    },
-    4: {
-        "name": "Method 4 (U-Net)",
-        "script": "method/method4/method4.py",
-    },
+    1: {"name": "Method 1 (ExG + GrabCut)", "script": "method/method1/method1.py"},
+    2: {"name": "Method 2 (HSV+LBP+Gabor + SVM/RF)", "script": "method/method2/method2.py"},
+    3: {"name": "Method 3 (Random Forest)", "script": "method/method3/method3.py"},
+    4: {"name": "Method 4 (U-Net)", "script": "method/method4/method4.py"},
 }
+
+ESTIMATED_TIMES = {1: 20, 2: 180, 3: 60, 4: 300}
+
+
+def format_time(seconds):
+    if seconds is None:
+        return "--:--"
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def render_progress(current, total, remaining_time):
+    percent = current / total
+    bar_len = 20
+    filled = int(bar_len * percent)
+    bar = "█" * filled + "░" * (bar_len - filled)
+    return f"[{bar}] {percent*100:5.1f}% | ETA: {format_time(remaining_time)}"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Run and evaluate wheat segmentation methods.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__,
-    )
-    parser.add_argument("--methods", "-m", nargs="+", type=int, choices=[1, 2, 3, 4])
-    parser.add_argument("--skip", "-s", nargs="+", type=int, choices=[1, 2, 3, 4])
+    parser = argparse.ArgumentParser(description="Run segmentation methods.")
+    parser.add_argument("--methods", "-m", nargs="+", type=int, choices=[1,2,3,4])
+    parser.add_argument("--skip", "-s", nargs="+", type=int, choices=[1,2,3,4])
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--fast", action="store_true")
     parser.add_argument("--dataset-root", type=str, default=None)
-    parser.add_argument("--method2-image-size", type=str, default=None)
-    parser.add_argument("--method4-epochs", type=int, default=None)
-    parser.add_argument("--method4-batch-size", type=int, default=None)
-    parser.add_argument("--method4-lr", type=float, default=None)
     return parser.parse_args()
 
 
@@ -79,25 +119,12 @@ def build_command(method_id, args, root):
     if method_id == 2:
         if args.dataset_root:
             cmd += ["--dataset-root", args.dataset_root]
-
-        if args.method2_image_size:
-            cmd += ["--image-size", args.method2_image_size]
-        elif args.fast:
+        if args.fast:
             cmd += ["--image-size", "256x256"]
 
     if method_id == 4:
-        if args.method4_epochs is not None:
-            cmd += ["--epochs", str(args.method4_epochs)]
-        elif args.fast:
-            cmd += ["--epochs", "1"]
-
-        if args.method4_batch_size is not None:
-            cmd += ["--batch-size", str(args.method4_batch_size)]
-        elif args.fast:
-            cmd += ["--batch-size", "2"]
-
-        if args.method4_lr is not None:
-            cmd += ["--lr", str(args.method4_lr)]
+        if args.fast:
+            cmd += ["--epochs", "1", "--batch-size", "2"]
 
     return cmd
 
@@ -105,19 +132,14 @@ def build_command(method_id, args, root):
 def run_method(method_id, idx, total, args, root, log_dir):
     method = METHODS[method_id]
 
-    print(f"\n[{idx}/{total}] {method['name']}")
+    print(f"\n========== [{idx}/{total}] {method['name']} ==========")
+    print("→ Starting...")
 
     cmd = build_command(method_id, args, root)
     print("Command:", " ".join(cmd))
 
     if args.dry_run:
-        return {
-            "id": method_id,
-            "status": "DRY_RUN",
-            "time": 0,
-            "log": None,
-            "command": cmd,
-        }
+        return {"id": method_id, "status": "DRY_RUN", "time": 0}
 
     log_path = log_dir / f"method{method_id}.log"
     start = time.perf_counter()
@@ -126,24 +148,30 @@ def run_method(method_id, idx, total, args, root, log_dir):
         process = subprocess.Popen(
             cmd,
             cwd=root,
-            stdout=f,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
         )
-        process.wait()
+
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+            print(line, end="")   # ✅ 完全打印，避免“没反应”
+            f.write(line)
+
+        try:
+            process.wait(timeout=3600)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            return {"id": method_id, "status": "TIMEOUT", "time": 3600}
 
     elapsed = time.perf_counter() - start
-    status = "OK" if process.returncode == 0 else "FAILED"
+    status = "OK" if process.returncode == 0 else f"FAILED({process.returncode})"
 
-    print(f"{status} in {int(elapsed)}s | log: {log_path}")
+    print(f"{status} in {format_time(elapsed)}")
 
-    return {
-        "id": method_id,
-        "status": status,
-        "time": elapsed,
-        "log": str(log_path),
-        "command": cmd,
-    }
+    return {"id": method_id, "status": status, "time": elapsed}
 
 
 def main():
@@ -153,48 +181,37 @@ def main():
     log_dir.mkdir(parents=True, exist_ok=True)
 
     selected = select_methods(args)
+    total = len(selected)
 
-    print("\nRunning methods:", selected)
+    print("\n========== RUN START ==========")
+    print("Running methods:", selected)
+
     if args.fast:
-        print("Fast mode: ON")
+        print("⚡ Fast mode enabled")
 
     results = []
-    failed = False
 
     for i, mid in enumerate(selected, 1):
-        try:
-            result = run_method(mid, i, len(selected), args, root, log_dir)
-            results.append(result)
+        result = run_method(mid, i, total, args, root, log_dir)
+        results.append(result)
 
-            if result["status"] != "OK":
-                failed = True
-                if not args.continue_on_error:
-                    break
+        remaining = sum(ESTIMATED_TIMES[m] for m in selected[i:])
+        progress = render_progress(i, total, remaining)
 
-        except Exception as e:
-            print(f"ERROR: method {mid} crashed: {e}")
-            failed = True
-            results.append({
-                "id": mid,
-                "status": "CRASHED",
-                "time": 0,
-                "log": None,
-                "command": None,
-                "error": str(e),
-            })
-            if not args.continue_on_error:
-                break
+        print("\nProgress:", progress)
+        print("Remaining:", format_time(remaining))
+
+        if result["status"] != "OK" and not args.continue_on_error:
+            break
+
+    print("\n========== FINAL SUMMARY ==========")
+    for r in results:
+        print(f"Method {r['id']}: {r['status']} | {format_time(r['time'])}")
 
     summary_path = root / "output" / "run_summary.json"
     summary_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
 
-    print("\nSummary saved to:", summary_path)
-
-    for result in results:
-        print(f"[{result['id']}] {result['status']} ({int(result.get('time', 0))}s)")
-
-    if failed:
-        sys.exit(1)
+    print("\nSaved:", summary_path)
 
 
 if __name__ == "__main__":

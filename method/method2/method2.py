@@ -55,13 +55,8 @@ class Method2Config:
 
     lbp_radius: int = 1
     lbp_points: int = 8
-    gabor_frequencies: Tuple[float, ...] = (0.10, 0.20)
-    gabor_thetas: Tuple[float, ...] = (
-        0.0,
-        float(np.pi / 4.0),
-        float(np.pi / 2.0),
-        float(3.0 * np.pi / 4.0),
-    )
+    gabor_frequencies = (0.10,)  # reduce to 1,1 to make it faster
+    gabor_thetas = (0.0,)  # reduce to 1,1 to make it faster
     use_xy_feature: bool = True
 
     classifier: str = "svm"  # svm | rf
@@ -74,9 +69,16 @@ class Method2Config:
     rf_n_jobs: int = 1
 
     # Fast default for SVM training cost control.
-    max_train_pixels_per_image: int = 1500
+    # max_train_pixels_per_image: int = 1500
+    # reduce to 800 to make it faster
+    max_train_pixels_per_image = 800
+
     max_val_pixels_per_image: int = 4000
-    max_train_pixels_total: int = 40000
+    
+    # max_train_pixels_total: int = 40000
+    # reduce to 15000 to make it faster
+    max_train_pixels_total = 15000
+
     max_val_pixels_total: int = 80000
 
     apply_postprocess: bool = True

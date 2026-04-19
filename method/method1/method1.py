@@ -176,25 +176,42 @@ def main(split_dir: Path, output_root: Path):
     visuals_dir.mkdir(parents=True, exist_ok=True)
     
     pairs = image_to_mask(split_dir)
+
+    if len(pairs) == 0:
+        raise ValueError(f"No data found in {split_dir}")
+
     print(f"[INFO] Found {len(pairs)} test images.")
+    print("[INFO] Evaluating Baseline on Test set ...")
     
     details = []
     
     # Baseline Eval
     print("[INFO] Evaluating Baseline on Test set ...")
-    for img_path, gt_path in pairs:
+    for i, (img_path, gt_path) in enumerate(pairs):
+        print(f"[INFO] {i+1}/{len(pairs)} -> {img_path.name}")
+
         img_bgr = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
         gt_mask = cv2.imread(str(gt_path), cv2.IMREAD_GRAYSCALE)
-        
+
         start = time.perf_counter()
-        pred_mask = predict_method1(img_bgr)
+        pred_mask = predict_method1(img_bgr, grabcut_iterations=3)  
         elapsed = time.perf_counter() - start
         
         cv2.imwrite(str(masks_dir / img_path.name), cv2.bitwise_not(pred_mask))
         vis = visuals(img_bgr, pred_mask, gt_mask)
         cv2.imwrite(str(visuals_dir / img_path.name), vis)
-        
+
         m = compute_metrics(pred_mask, gt_mask)
+
+        # save failure cases
+        if m["iou"] < 0.40:
+            reason = _failure_reason(m)
+            _save_failure_overlay(
+                img_bgr, pred_mask, gt_mask,
+                failure_dir / f"{img_path.stem}_failure.png"
+            )
+            print(f"    ⚠️ Failure case detected! {reason}")
+
         details.append({
             "sample_id": img_path.stem,
             "precision": m["precision"],

@@ -268,8 +268,10 @@ def train_unet(train_dir: Path, val_dir: Path,
     train_ds = WheatSegDataset(train_pairs, augment=True)
     val_ds = WheatSegDataset(val_pairs, augment=False)
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
-                              num_workers=0, drop_last=False)
+    # train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+    #                           num_workers=0, drop_last=False)
+    train_loader = DataLoader(train_ds, batch_size=2, shuffle=True,
+                          num_workers=0, drop_last=False)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
                             num_workers=0, drop_last=False)
 
@@ -428,6 +430,12 @@ if __name__ == "__main__":
     test_path = project_root / "data" / "test"
     output = project_root / "output" / "method4"
 
+    # Training
+    # main(train_dir=train_path, val_dir=val_path,
+    #      test_dir=test_path, output_root=output,
+    #      epochs=25, batch_size=8, lr=1e-3)
+
+    # Testing only
     main(train_dir=train_path, val_dir=val_path,
          test_dir=test_path, output_root=output,
-         epochs=25, batch_size=8, lr=1e-3)
+         epochs=1, batch_size =2, lr=1e-3)

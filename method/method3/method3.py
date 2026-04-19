@@ -1,4 +1,5 @@
 import json
+import csv
 import time
 import cv2
 import numpy as np
@@ -339,12 +340,83 @@ def predict_image(model, img_bgr: np.ndarray) -> np.ndarray:
 
     return pred_mask
 
-def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
-         samples_per_image=2000):
-   
-    masks_dir = output_root / "masks"
+
+def apply_distortion(img_bgr, kind, seed=0):
+    import numpy as np
+    import cv2
+    rng = np.random.default_rng(seed)
+    img = img_bgr.astype(np.float32)
+    k = kind.lower()
+    if k == "gaussian_noise":
+        noise = rng.normal(loc=0.0, scale=12.75, size=img.shape).astype(np.float32)
+        out = np.clip(img + noise, 0, 255)
+    elif k == "gaussian_blur":
+        out = cv2.GaussianBlur(img, (5, 5), sigmaX=1.2)
+    elif k == "low_brightness":
+        out = np.clip(img * 0.60, 0, 255)
+    elif k == "low_contrast":
+        img_norm = img / 255.0
+        out_norm = np.clip(np.power(img_norm, 1.25) * 0.8, 0.0, 1.0)
+        out = out_norm * 255.0
+    elif k == "occlusion":
+        out = img.copy()
+        h, w, _ = out.shape
+        occ_h = max(1, int(h * 0.20))
+        occ_w = max(1, int(w * 0.20))
+        y0 = int(rng.integers(0, max(h - occ_h + 1, 1)))
+        x0 = int(rng.integers(0, max(w - occ_w + 1, 1)))
+        out[y0 : y0 + occ_h, x0 : x0 + occ_w, :] = 0.0
+    else:
+        out = img
+    return out.astype(np.uint8)
+
+def _failure_reason(metric):
+    p = float(metric["precision"])
+    r = float(metric["recall"])
+    iou = float(metric["iou"])
+    if r < 0.55 and p >= 0.70:
+        return "Under-segmentation: Handcrafted features failed to separate plant under this lighting."
+    if p < 0.55 and r >= 0.70:
+        return "Over-segmentation: RF misclassified background textures (like soil/shadow) as plant."
+    if iou < 0.40 and abs(p - r) < 0.15:
+        return "Total confusion: Overall feature breakdown on this image."
+    return "Complex failure: Handcrafted LBP/HSV features are insufficient here."
+
+def _save_failure_overlay(image_bgr, pred, gt, out_path):
+    import numpy as np
+    import cv2
+    base = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    pred_b = pred > 0
+    gt_b = gt == 0
+    overlay = base.copy()
+    fp = np.logical_and(pred_b, np.logical_not(gt_b))
+    fn = np.logical_and(np.logical_not(pred_b), gt_b)
+    tp = np.logical_and(pred_b, gt_b)
+    overlay[tp] = 0.6 * overlay[tp] + 0.4 * np.asarray([1.0, 1.0, 0.0], dtype=np.float32)
+    overlay[fp] = 0.5 * overlay[fp] + 0.5 * np.asarray([1.0, 0.0, 0.0], dtype=np.float32)
+    overlay[fn] = 0.5 * overlay[fn] + 0.5 * np.asarray([0.0, 1.0, 0.0], dtype=np.float32)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(out_path), cv2.cvtColor((overlay * 255.0).astype(np.uint8), cv2.COLOR_RGB2BGR))
+
+def _write_csv(path, rows):
+    import csv
+    if not rows: return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    keys = list(rows[0].keys())
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(rows)
+
+def main(train_dir, val_dir, test_dir, output_root, samples_per_image=2000):
+    import time
+    import json
+    import numpy as np
+    import cv2
+    import joblib
+    masks_dir = output_root / "masks_final"
     visuals_dir = output_root / "visuals"
-    metrics_path = output_root / "metrics.json"
+    failure_dir = output_root / "failure_cases"
     model_path = output_root / "rf_model.joblib"
 
     masks_dir.mkdir(parents=True, exist_ok=True)
@@ -355,85 +427,87 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
     train_time = time.perf_counter() - train_start
     print(f"\nTotal training time: {train_time:.2f} seconds")
 
-    # save the trained model
     joblib.dump(model, str(model_path))
-    print(f"Model saved to {model_path}")
 
-    # ---- Step 2: Test ----
     print("\n=== Testing Phase ===")
     test_pairs = image_to_mask(test_dir)
-    print(f"Found {len(test_pairs)} test image-mask pairs")
-
-    results = []
-    total_predict_time = 0.0
-
+    details = []
+    
     for img_path, gt_path in test_pairs:
         img_bgr = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
-        if img_bgr is None:
-            raise FileNotFoundError(f"Cannot read image: {img_path}")
         gt_mask = cv2.imread(str(gt_path), cv2.IMREAD_GRAYSCALE)
-        if gt_mask is None:
-            raise FileNotFoundError(f"Cannot read mask: {gt_path}")
-
-        # predict
         start = time.perf_counter()
         pred_mask = predict_image(model, img_bgr)
         elapsed = time.perf_counter() - start
-        total_predict_time += elapsed
-
-        # Save using EWS dataset convention: 0 (black) = plant, 255 (white) = background
-        # bitwise_not converts internal (255=plant) → saved (0=plant)
+        
         cv2.imwrite(str(masks_dir / img_path.name), cv2.bitwise_not(pred_mask))
-
-        # compute metrics
-        metrics = compute_metrics(pred_mask, gt_mask)
-
-        # save visualisation
         vis = visuals(img_bgr, pred_mask, gt_mask)
         cv2.imwrite(str(visuals_dir / img_path.name), vis)
+        
+        m = compute_metrics(pred_mask, gt_mask)
+        details.append({"sample_id": img_path.stem, "precision": m["precision"], "recall": m["recall"], "f1": m["f1"], "iou": m["iou"], "test_time_sec": elapsed})
+        
+    def _summary(dlist):
+        out = {}
+        for k in ["precision", "recall", "f1", "iou", "test_time_sec"]:
+            vals = [d[k] for d in dlist]
+            out[f"{k}_mean"] = float(np.mean(vals))
+            out[f"{k}_std"] = float(np.std(vals))
+        return out
+        
+    baseline_summary = _summary(details)
+    
+    print("[INFO] Running Robustness experiments ...")
+    robustness_rows = []
+    for kind in ("gaussian_noise", "gaussian_blur", "low_brightness", "low_contrast", "occlusion"):
+        rob_details = []
+        for i, (img_path, gt_path) in enumerate(test_pairs):
+            img_bgr = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+            gt_mask = cv2.imread(str(gt_path), cv2.IMREAD_GRAYSCALE)
+            distorted = apply_distortion(img_bgr, kind, seed=42+i)
+            
+            start = time.perf_counter()
+            pred_mask = predict_image(model, distorted)
+            elapsed = time.perf_counter() - start
+            
+            m = compute_metrics(pred_mask, gt_mask)
+            rob_details.append({"precision": m["precision"], "recall": m["recall"], "f1": m["f1"], "iou": m["iou"], "test_time_sec": elapsed})
+        
+        r_sum = _summary(rob_details)
+        robustness_rows.append({"distortion": kind, "precision": r_sum["precision_mean"], "recall": r_sum["recall_mean"], "f1": r_sum["f1_mean"], "iou": r_sum["iou_mean"], "test_time_mean_sec": r_sum["test_time_sec_mean"]})
+        
+    print("[INFO] Generating Failure Analysis ...")
+    worst = sorted(details, key=lambda x: x["iou"])[:5]
+    failure_lines = ["# Failure Analysis (Method 3)", "", "| sample_id | precision | recall | f1 | iou | reason |", "|---|---:|---:|---:|---:|---|"]
+    for item in worst:
+        sid = item["sample_id"]
+        pair = next(p for p in test_pairs if p[0].stem == sid)
+        img_bgr = cv2.imread(str(pair[0]), cv2.IMREAD_COLOR)
+        gt_mask = cv2.imread(str(pair[1]), cv2.IMREAD_GRAYSCALE)
+        pred_mask = predict_image(model, img_bgr)
+        _save_failure_overlay(img_bgr, pred_mask, gt_mask, failure_dir / f"{sid}.png")
+        reason = _failure_reason(item)
+        failure_lines.append(f"| {sid} | {item['precision']:.4f} | {item['recall']:.4f} | {item['f1']:.4f} | {item['iou']:.4f} | {reason} |")
 
-        results.append({
-            "image_name": img_path.name,
-            "predict_time": elapsed,
-            **metrics,
-        })
-
-        print(f"  {img_path.name}: F1={metrics['f1']:.4f}, IoU={metrics['iou']:.4f}, Time={elapsed:.3f}s")
-
-    # ---- Step 3: Summary ----
-    summary = {
-        "method": "Random Forest with handcrafted features",
-        "features": "RGB, HSV, ExG, ExR, ExG-ExR, local mean/std of G, Gaussian blur, LBP",
-        "training_time": train_time,
-        "metrics": {
-            "precision": float(np.mean([r["precision"] for r in results])),
-            "recall": float(np.mean([r["recall"] for r in results])),
-            "f1": float(np.mean([r["f1"] for r in results])),
-            "iou": float(np.mean([r["iou"] for r in results])),
-            "average_predict_time_per_image": total_predict_time / len(test_pairs),
-        },
-    }
-
-    with open(metrics_path, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2)
-
-    print(f"\n=== Results Summary ===")
-    print(f" Average Precision: {summary['metrics']['precision']:.4f}")
-    print(f" Average Recall:    {summary['metrics']['recall']:.4f}")
-    print(f" Average F1:        {summary['metrics']['f1']:.4f}")
-    print(f" Average IoU:       {summary['metrics']['iou']:.4f}")
-    print(f" Average predict time:  {summary['metrics']['average_predict_time_per_image']:.3f}s")
-    print(f"\nResults saved to {output_root}")
-
+    (output_root / "failure_analysis.md").write_text("\n".join(failure_lines), encoding="utf-8")
+    
+    _write_csv(output_root / "robustness_results.csv", robustness_rows)
+    _write_csv(output_root / "test_details_final.csv", details)
+    
+    write_json = lambda p, d: p.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json(output_root / "report_for_D.json", {
+        "method": "Method 3 (Machine Learning: Random Forest + Features)",
+        "train": {"samples_per_image": samples_per_image},
+        "test": {"baseline": baseline_summary, "robustness": robustness_rows},
+        "timing": {"train_time_sec": train_time, "test_time_mean_sec": baseline_summary["test_time_sec_mean"]}
+    })
+    print(f"[INFO] Method 3 complete. Results saved to {output_root}")
 
 if __name__ == "__main__":
-    # get the project root directory (one level up from method/)
+    from pathlib import Path
     project_root = Path(__file__).resolve().parent.parent.parent
-
     train_path = project_root / "data" / "train"
     val_path = project_root / "data" / "validation"
     test_path = project_root / "data" / "test"
     output = project_root / "output" / "method3"
-
-    main(train_dir=train_path, val_dir=val_path,
-         test_dir=test_path, output_root=output)
+    main(train_dir=train_path, val_dir=val_path, test_dir=test_path, output_root=output)

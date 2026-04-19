@@ -10,6 +10,7 @@ Usage:
   python run_all.py --continue-on-error
   python run_all.py --dry-run
   python run_all.py --methods 2 --dataset-root data
+  python run_all.py --fast
 """
 
 import argparse
@@ -50,7 +51,12 @@ def parse_args():
     parser.add_argument("--skip", "-s", nargs="+", type=int, choices=[1, 2, 3, 4])
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--fast", action="store_true")
     parser.add_argument("--dataset-root", type=str, default=None)
+    parser.add_argument("--method2-image-size", type=str, default=None)
+    parser.add_argument("--method4-epochs", type=int, default=None)
+    parser.add_argument("--method4-batch-size", type=int, default=None)
+    parser.add_argument("--method4-lr", type=float, default=None)
     return parser.parse_args()
 
 
@@ -71,9 +77,27 @@ def build_command(method_id, args, root):
     cmd = [sys.executable, str(script)]
 
     if method_id == 2:
-        cmd += ["--image-size", "256x256"]
         if args.dataset_root:
             cmd += ["--dataset-root", args.dataset_root]
+
+        if args.method2_image_size:
+            cmd += ["--image-size", args.method2_image_size]
+        elif args.fast:
+            cmd += ["--image-size", "256x256"]
+
+    if method_id == 4:
+        if args.method4_epochs is not None:
+            cmd += ["--epochs", str(args.method4_epochs)]
+        elif args.fast:
+            cmd += ["--epochs", "1"]
+
+        if args.method4_batch_size is not None:
+            cmd += ["--batch-size", str(args.method4_batch_size)]
+        elif args.fast:
+            cmd += ["--batch-size", "2"]
+
+        if args.method4_lr is not None:
+            cmd += ["--lr", str(args.method4_lr)]
 
     return cmd
 
@@ -87,7 +111,13 @@ def run_method(method_id, idx, total, args, root, log_dir):
     print("Command:", " ".join(cmd))
 
     if args.dry_run:
-        return {"id": method_id, "status": "DRY_RUN"}
+        return {
+            "id": method_id,
+            "status": "DRY_RUN",
+            "time": 0,
+            "log": None,
+            "command": cmd,
+        }
 
     log_path = log_dir / f"method{method_id}.log"
     start = time.perf_counter()
@@ -112,6 +142,7 @@ def run_method(method_id, idx, total, args, root, log_dir):
         "status": status,
         "time": elapsed,
         "log": str(log_path),
+        "command": cmd,
     }
 
 
@@ -124,6 +155,8 @@ def main():
     selected = select_methods(args)
 
     print("\nRunning methods:", selected)
+    if args.fast:
+        print("Fast mode: ON")
 
     results = []
     failed = False
@@ -141,6 +174,14 @@ def main():
         except Exception as e:
             print(f"ERROR: method {mid} crashed: {e}")
             failed = True
+            results.append({
+                "id": mid,
+                "status": "CRASHED",
+                "time": 0,
+                "log": None,
+                "command": None,
+                "error": str(e),
+            })
             if not args.continue_on_error:
                 break
 

@@ -497,6 +497,53 @@ def predict_method2(model: Pipeline, image: np.ndarray, cfg: Method2Config) -> T
     return pred.astype(np.uint8), elapsed
 
 
+
+def visuals(image: np.ndarray, pred_mask: np.ndarray, gt_mask: np.ndarray) -> np.ndarray:
+    """Produce a side-by-side comparison image (Original | Prediction | Ground Truth).
+
+    `image` can be either:
+      - RGB float32 in [0, 1]  (returned by read_image with normalize_input=True)
+      - BGR uint8 in [0, 255]  (used by methods 1/3/4)
+    Both cases are handled automatically.
+    """
+    import cv2
+
+    img = np.array(image)
+    if img.dtype != np.uint8:
+        img = np.clip(img * 255.0, 0, 255).astype(np.uint8)
+
+    if image.dtype == np.uint8:
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    else:
+        img_rgb = img
+
+    # Prediction: internal convention is 1 = plant, display plant as black
+    pred_display = np.where(np.array(pred_mask) > 0, 0, 255).astype(np.uint8)
+    pred_rgb = cv2.cvtColor(pred_display, cv2.COLOR_GRAY2RGB)
+
+    # Ground truth: support both binary {0,1} and raw EWS {0,255}
+    gt = np.array(gt_mask)
+    if gt.max() <= 1.0 and gt.min() >= 0.0:
+        gt_display = np.where(gt > 0, 0, 255).astype(np.uint8)
+    else:
+        gt_display = np.where(gt == 0, 0, 255).astype(np.uint8)
+
+    gt_rgb = cv2.cvtColor(gt_display, cv2.COLOR_GRAY2RGB)
+
+    panels = [img_rgb, pred_rgb, gt_rgb]
+    titles = ["Original image", "Prediction mask", "Actual mask"]
+    h, w = img_rgb.shape[:2]
+    combined = []
+    for panel, title in zip(panels, titles):
+        canvas = np.full((h + 40, w, 3), 255, dtype=np.uint8)
+        canvas[40:, :, :] = panel
+        cv2.putText(canvas, title, (15, 27), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2, cv2.LINE_AA)
+        combined.append(canvas)
+
+    result = np.hstack(combined)
+    return cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
+
+    
 def evaluate(pred_mask: np.ndarray, gt_mask: np.ndarray) -> Dict[str, float]:
     pred = (pred_mask > 0)
     gt = (gt_mask > 0)
@@ -560,6 +607,11 @@ def evaluate_on_records(
 
         if save_dir is not None:
             save_mask(pred, save_dir / f"{rec.sample_id}.png", cfg)
+            # also save visuals
+            vis_dir = save_dir.parent / "visuals"
+            vis_dir.mkdir(parents=True, exist_ok=True)
+            vis = visuals(image, pred, gt)
+            cv2.imwrite(str(vis_dir / f"{rec.sample_id}.png"), vis)
 
         details.append(
             {

@@ -2,6 +2,7 @@ import json
 import time
 import cv2
 import numpy as np
+import argparse
 from pathlib import Path
 
 import torch
@@ -341,7 +342,7 @@ def predict_image(model: nn.Module, img_bgr: np.ndarray, device: torch.device) -
 def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
          epochs: int = 25, batch_size: int = 8, lr: float = 1e-3):
 
-    masks_dir = output_root / "masks"
+    masks_dir = output_root / "masks_final"
     visuals_dir = output_root / "visuals"
     metrics_path = output_root / "metrics.json"
     model_path = output_root / "unet_model.pt"
@@ -399,7 +400,7 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
         "method": "U-Net (deep learning)",
         "backbone": "Custom U-Net, base=32, BCE+Dice loss, Adam + cosine LR",
         "augmentation": "random flips, random 90-deg rotations, brightness jitter",
-        "training_time": train_time,
+        "train_time_sec": train_time,
         "epochs": epochs,
         "batch_size": batch_size,
         "learning_rate": lr,
@@ -408,7 +409,7 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
             "recall": float(np.mean([r["recall"] for r in results])),
             "f1": float(np.mean([r["f1"] for r in results])),
             "iou": float(np.mean([r["iou"] for r in results])),
-            "average_predict_time_per_image": total_predict_time / len(test_pairs),
+            "test_time_sec_mean": total_predict_time / len(test_pairs),
         },
     }
 
@@ -424,20 +425,29 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
     print(f"\nResults saved to {output_root}")
 
 
-if __name__ == "__main__":
+def parse_args():
     project_root = Path(__file__).resolve().parent.parent.parent
+    parser = argparse.ArgumentParser(
+        description="Run Method 4 (U-Net) for wheat segmentation."
+    )
+    parser.add_argument("--train-dir", type=Path, default=project_root / "data" / "train")
+    parser.add_argument("--val-dir", type=Path, default=project_root / "data" / "validation")
+    parser.add_argument("--test-dir", type=Path, default=project_root / "data" / "test")
+    parser.add_argument("--output-root", type=Path, default=project_root / "output" / "method4")
+    parser.add_argument("--epochs", type=int, default=25)
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    return parser.parse_args()
 
-    train_path = project_root / "data" / "train"
-    val_path = project_root / "data" / "validation"
-    test_path = project_root / "data" / "test"
-    output = project_root / "output" / "method4"
 
-    # Training
-    main(train_dir=train_path, val_dir=val_path,
-         test_dir=test_path, output_root=output,
-         epochs=25, batch_size=8, lr=1e-3)
-
-    # Testing only
-    # main(train_dir=train_path, val_dir=val_path,
-    #      test_dir=test_path, output_root=output,
-    #      epochs=1, batch_size =2, lr=1e-3)
+if __name__ == "__main__":
+    args = parse_args()
+    main(
+        train_dir=args.train_dir,
+        val_dir=args.val_dir,
+        test_dir=args.test_dir,
+        output_root=args.output_root,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        lr=args.lr,
+    )

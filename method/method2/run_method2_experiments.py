@@ -139,9 +139,10 @@ def _write_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    project_root = Path(__file__).resolve().parent.parent.parent
     p = argparse.ArgumentParser(description="Run Method2 experiments (HSV+LBP+Gabor + classifier).")
     p.add_argument("--dataset-root", type=Path, default=None, help="Dataset root path.")
-    p.add_argument("--output-root", type=Path, default=Path("outputs/method2"), help="Output folder.")
+    p.add_argument("--output-root", type=Path, default=project_root / "output" / "method2", help="Output folder.")
     p.add_argument("--image-size", type=str, default="", help="Optional resize as HxW, e.g. 350x350")
     p.add_argument("--seed", type=int, default=42, help="Random seed.")
     p.add_argument("--log-every", type=int, default=10, help="Progress log frequency in images.")
@@ -159,8 +160,8 @@ def _parse_image_size(raw: str):
 
 
 def _default_dataset_root() -> Path | None:
-    script_dir = Path(__file__).resolve().parent
-    candidate = script_dir / "EWS-Dataset"
+    project_root = Path(__file__).resolve().parent.parent.parent
+    candidate = project_root / "data"
     if candidate.exists() and candidate.is_dir():
         return candidate
     return None
@@ -193,7 +194,7 @@ def main() -> None:
 
     print("[INFO] Discovering dataset splits ...")
     train_records = discover_split_records(dataset_root, "train")
-    val_records = discover_split_records(dataset_root, "val")
+    val_records = discover_split_records(dataset_root, "validation")
     test_records = discover_split_records(dataset_root, "test")
     print(
         f"[INFO] Records loaded: train={len(train_records)}, val={len(val_records)}, test={len(test_records)}"

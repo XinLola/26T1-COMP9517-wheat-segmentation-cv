@@ -9,12 +9,20 @@ The project is based on the EWS (Eschikon Wheat Segmentation) dataset, and perfo
 
 ## Setup
 
-We recommend using Python 3.10.
+We recommend using Python 3.10. We provide a `Makefile` for one-click environment setup.
 
-Install dependencies using:
-
+### Option 1: Conda (Recommended)
+This method is recommended, especially for managing system-level dependencies like OpenCV and PyTorch.
 ```bash
-pip install -r requirements.txt
+make setup-conda
+conda activate comp9517
+```
+
+### Option 2: Python venv
+If you prefer using standard Python virtual environments via pip:
+```bash
+make setup-venv
+source venv/bin/activate
 ```
 
 ## Dataset
@@ -50,13 +58,15 @@ https://www.research-collection.ethz.ch/entities/researchdata/165d22fc-6b0f-4fc3
 
 After extraction, the dataset should be organized as follows:
 
+```text
 data/
-train/
-images/
-masks/
-val/
-images/
-masks/
-test/
-images/
-masks/
+├── train/
+│   ├── images/
+│   └── masks/
+├── val/
+│   ├── images/
+│   └── masks/
+└── test/
+    ├── images/
+    └── masks/
+```

@@ -27,7 +27,7 @@ METHODS = {
     },
     2: {
         "name": "Method 2 (HSV+LBP+Gabor + SVM/RF)",
-        "script": "method/method2/run_method2_experiments.py",
+        "script": "method/method2/method2.py",
     },
     3: {
         "name": "Method 3 (Random Forest)",
@@ -70,8 +70,10 @@ def build_command(method_id, args, root):
 
     cmd = [sys.executable, str(script)]
 
-    if method_id == 2 and args.dataset_root:
-        cmd += ["--dataset-root", args.dataset_root]
+    if method_id == 2:
+        cmd += ["--image-size", "256x256"]
+        if args.dataset_root:
+            cmd += ["--dataset-root", args.dataset_root]
 
     return cmd
 

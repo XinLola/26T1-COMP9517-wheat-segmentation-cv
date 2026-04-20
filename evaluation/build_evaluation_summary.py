@@ -57,6 +57,26 @@ def read_method(output_root, method_name):
 
     return row
 
+def write_markdown(rows, path):
+    with path.open("w", encoding="utf-8") as f:
+        f.write("## 📊 Quantitative Comparison\n\n")
+        f.write("| Method | Precision | Recall | F1-score | IoU | Inference Time (s) |\n")
+        f.write("|--------|----------|--------|----------|-----|--------------------|\n")
+
+        for r in rows:
+            def fmt(mean, std):
+                if std is None:
+                    return f"{mean:.3f}"
+                return f"{mean:.3f} ± {std:.3f}"
+
+            f.write(
+                f"| {r['method']} | "
+                f"{fmt(r['precision'], r['precision_std'])} | "
+                f"{fmt(r['recall'], r['recall_std'])} | "
+                f"{fmt(r['f1'], r['f1_std'])} | "
+                f"{fmt(r['iou'], r['iou_std'])} | "
+                f"{r['avg_inference_time_sec']:.3f} |\n"
+            )
 
 def main():
     root = Path(__file__).resolve().parent.parent
@@ -97,6 +117,10 @@ def main():
         print(f"[INFO] Saved comparison to {csv_path}")
     else:
         print("[ERROR] No valid evaluation_summary found.")
+
+    md_path = eval_root / "quantitative_comparison.md"
+    write_markdown(rows, md_path)
+    print(f"[INFO] Saved markdown to {md_path}")
 
 
 if __name__ == "__main__":

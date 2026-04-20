@@ -157,7 +157,7 @@ def run_method(method_id, idx, total, args, root, log_dir):
             line = process.stdout.readline()
             if not line:
                 break
-            print(line, end="")   # ✅ 完全打印，避免“没反应”
+            print(line, end="")   
             f.write(line)
 
         try:

@@ -18,12 +18,27 @@ def safe_get(d, keys, default=None):
 
 
 def build_row(method_name, summary):
+    test_block = safe_get(summary, ["test"])
+
+    if "baseline" in test_block:
+        base = test_block["baseline"]
+    elif "svm_final" in test_block:
+        base = test_block["svm_final"]
+    else:
+        base = {}
+
     return {
         "method": method_name,
-        "precision": safe_get(summary, ["test", "baseline", "precision_mean"]),
-        "recall": safe_get(summary, ["test", "baseline", "recall_mean"]),
-        "f1": safe_get(summary, ["test", "baseline", "f1_mean"]),
-        "iou": safe_get(summary, ["test", "baseline", "iou_mean"]),
+        "precision": base.get("precision_mean"),
+        "recall": base.get("recall_mean"),
+        "f1": base.get("f1_mean"),
+        "iou": base.get("iou_mean"),
+        # std will be None because there is only one split (no averaging over multiple splits)
+        "precision_std": base.get("precision_std", None),
+        "recall_std": base.get("recall_std", None),
+        "f1_std": base.get("f1_std", None),
+        "iou_std": base.get("iou_std", None),
+
         "avg_inference_time_sec": safe_get(summary, ["timing", "test_time_mean_sec"]),
     }
 
@@ -69,8 +84,12 @@ def main():
                     "recall",
                     "f1",
                     "iou",
+                    "precision_std",
+                    "recall_std",
+                    "f1_std",
+                    "iou_std",
                     "avg_inference_time_sec",
-                ],
+                ]
             )
             writer.writeheader()
             writer.writerows(rows)

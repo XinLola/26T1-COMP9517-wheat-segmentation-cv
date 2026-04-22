@@ -4,6 +4,8 @@
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{float}
+\usepackage{graphicx}
+\usepackage{subcaption}
 
 \title{Wheat Segmentation using Traditional, Machine Learning and Deep Learning Methods}
 
@@ -39,30 +41,34 @@ Wheat segmentation, Computer vision, Machine learning, Deep learning, U-Net, Ran
 \section{Introduction}
 
 \subsection{Problem definition }
-Reliable wheat segmentation in outdoor RGB images can be treated as a binary segmentation task, where each pixel is classified as either wheat or background. Although this formulation is straightforward, the task itself is difficult in practice. The images were collected under real field conditions, so they contain large variation in lighting, shadows, wheat growth stages, and soil appearance. In addition, thin leaves and unclear boundaries make accurate segmentation more challenging. In this project, our goal is not only to generate segmentation masks, but also to compare different types of methods fairly on the official EWS split using precision, recall, F1-score, IoU, and computational cost.
+Reliable wheat segmentation in outdoor RGB images can be considerd as a binary segmentation task, each pixel is classified as wheat or background. Although this formulation is simple, the task is difficult to practice. The images were collected under real field conditions, so they include large variation in lighting, shadows, wheat growth stages, and soil appearance. In addition, thin leaves and unclear boundaries make accurate segmentation more difficult. In this project, our goal is generate segmentation masks and compare different types of methods on the official EWS split using precision, recall, F1-score, IoU, and computational cost. 
+
 
 \subsection{Motivation}  
-Automatic crop segmentation is an important problem in agricultural computer vision because it can support later tasks such as crop monitoring, canopy analysis, and plant phenotyping. It is also a useful benchmark for comparing different segmentation strategies. In this project, we evaluate traditional image processing, machine learning, and deep learning methods on the same dataset. This allows us to compare their strengths and weaknesses more clearly, especially in terms of accuracy, robustness, and efficiency.
+Automatic crop segmentation is an important problem in agricultural computer vision because it can be useful in later tasks. It is also useful for comparing different segmentation strategies. In this project, we evaluate traditional image processing, machine learning, and deep learning methods on the same dataset. This allows us to compare their strengths and weaknesses, especially in terms of accuracy, robustness, and efficiency. 
+
 
 \subsection{Dataset overview  }
-This project uses the EWS (Eschikon Wheat Segmentation) dataset introduced by Zenkl et al. (2022). The dataset contains 190 RGB field images, each with a resolution of 350 × 350 pixels, together with manually annotated binary masks for plant and background regions. To avoid data leakage, we kept the official split unchanged throughout the project. In our implementation, this corresponds to 142 training images, 24 validation images, and 24 test images. The dataset is challenging because the images were captured outdoors and show strong variation in lighting, shadows, wheat density, and soil texture. For this reason, EWS is suitable for evaluating both segmentation accuracy and method robustness.
+This project uses the EWS (Eschikon Wheat Segmentation) dataset. The dataset have 190 RGB field images, each with a resolution of 350 × 350 pixels, with annotated binary masks for plant and background regions. To avoid data leakage, we kept the split unchanged throughout the project. In our implementation, this corresponds to 142 training images, 24 validation images, and 24 test images. The dataset is challenging because the images were captured outdoors and show strong difference in lighting, shadows, wheat density, and soil texture. For this reason, EWS is suitable for evaluating segmentation accuracy and method robustness. 
 
 
 
 \section{Literature Review}
 
 \subsection{Traditional Segmentation}
-Early plant segmentation methods often rely on vegetation indices and threshold-based image processing. In agricultural images, Excess Green (ExG) is widely used because plant regions usually have a stronger green response than soil or residue. Thresholding methods such as Otsu’s method can then be applied to separate foreground from background automatically. More advanced refinement methods, such as GrabCut, can further improve an initial mask by modelling foreground and background appearance and optimising the segmentation iteratively. These methods are simple, fast, and easy to interpret, and they usually require little or no training data. However, their performance often becomes unstable when lighting changes, plant boundaries are weak, or the background has similar colour characteristics to the crop.
+Early vegetation segmentation methods relied on vegetation indices and threshold-based image processing. In agricultural imagery, excess green (ExG) is widely used because vegetated areas typically show a stronger green response than soil. Methods such as Otsu’s method can then be applied to automatically separate the foreground from the background. More advanced methods (such as GrabCut) further refine the initial segmentation map by modeling and optimizing the visual characteristics of the foreground and background. These methods are simple and fast, require little or no training data. However, their performance often becomes unstable when lighting conditions change, plant boundaries are indistinct, or the background have similar color characteristics with the crops. 
+
 
 \subsection{ML-based Segmentation}
-Another common approach is to treat segmentation as a pixel-wise classification problem and use handcrafted features to represent each pixel. These features may include colour information, vegetation indices, texture descriptors, and spatial coordinates. A supervised classifier, such as SVM or Random Forest, is then trained to distinguish plant pixels from background pixels. Compared with rule-based methods, this framework is more flexible because it can learn more complex decision patterns from labelled data. It can also perform well on moderate-sized datasets. However, its success still depends strongly on the quality of the handcrafted features, and purely local pixel features usually provide only limited information about global plant shape or scene context.
+Another common way is let the segmentation become a pixel-wise classification problem and use artificially designed features to represent each pixel. These features may include colour information, vegetation indices, texture descriptors, and spatial coordinates. Supervised classifier, such as SVM or Random Forest, is trained to distinguish plant pixels from background pixels. Compared with rule-based methods, this framework is more flexible because it can learn more complex decision patterns from data. It can also perform well on moderate-sized datasets. However, its success depends on the quality of the artificially designed features, and local pixel features usually provide only limited information about global plant shape or scene context. 
+
 
 \subsection{DL-based Segmentation}
-Deep learning methods differ from classical approaches because they do not rely on manually designed features. Instead, they learn useful feature representations directly from training images. Encoder-decoder architectures such as U-Net have become standard for semantic segmentation because they combine local detail with broader contextual information. The skip connections in U-Net are especially helpful for preserving spatial information, which is important for recovering thin structures and object boundaries. For binary segmentation tasks with class imbalance, it is also common to combine pixel-wise loss functions with overlap-based losses such as Dice loss. In general, deep learning models can produce more accurate and more robust segmentation results, but they also require more computation, more training time, and more careful model tuning.
+Deep learning methods is different from classical way because they do not rely on artificially designed features. Instead, they learn useful feature representations from training images. Encoder-decoder architectures such as U-Net have become a standard way for semantic segmentation because they are able to combine local detail with contextual information. The skip connections in U-Net are helpful for preserving spatial information, is important for recovering thin structures and object boundaries. For binary segmentation tasks, it is also common to combine pixel-wise loss functions with overlap-based losses such as Dice loss. In general, deep learning models can produce more accurate and more reliable segmentation results, they also require more computation, more training time, and more careful model tuning. 
+
 
 \subsection{Related Crop / Plant Segmentation Work}
-Recent research on crop and plant segmentation suggests a clear shift from simple colour-based methods to supervised learning methods and then to deep learning models. The survey by Adhinata and Sumiharto (2024) notes that classical methods are still useful when data or computational resources are limited, while deep learning methods are usually preferred when robustness and segmentation quality are more important. For wheat segmentation in particular, Zenkl et al. (2022) showed that outdoor plant segmentation remains challenging even with modern methods, mainly because of thin leaves, shadows, and visual similarity between wheat and soil. This is why, in our project, it is meaningful to compare multiple method families rather than relying on a single pipeline.
-
+Research on crop and plant segmentation shifts from simple colour-based methods to supervised learning methods and deep learning models. The survey by Adhinata and Sumiharto in 2024 notes that classical methods are useful when data or computational resources are limited, and deep learning methods are helpful when robustness and segmentation quality are more important. For wheat segmentation in particular, Zenkl et al. in 2022 showed that outdoor plant segmentation remains challenging even with modern methods, mainly because of thin leaves, shadows, and visual similarity between wheat and soil. This is why, in our project, it is meaningful to compare multiple method families rather than relying on a single pipeline.
 
 
 \section{Methods}
@@ -210,6 +216,35 @@ Method 2 (SVM) has the highest recall but suffers from high inference time which
 The traditional method 1 performs the worst overall, especially in precision, which indicate the limitations of unsupervised heuristic-based approaches. 
 To summary, deep learning method achieved superior accuracy, while classical machine learning method offers better efficiency and simpler deployment, and it also highlight a clear tradeoff between performance and computational cost. 
 
+\subsection{Qualitative Results}
+
+In addition to quantitative evaluation, we present qualitative results to visually compare the segmentation performance of different methods. Fig.~\ref{fig:method2_result}--Fig.~\ref{fig:method4_result} show representative results of Method 2 (SVM), Method 3 (Random Forest), and Method 4 (U-Net), respectively.
+
+It can be observed that all methods are able to capture the main plant regions, but there are clear differences in segmentation quality. Method 2 produces relatively coarse masks with noticeable noise and fragmented structures. Method 3 improves the overall consistency and reduces noise, resulting in cleaner segmentation. Method 4 achieves the best visual quality, with more complete plant structures and sharper boundaries that align closely with the ground truth.
+
+These qualitative results are consistent with the quantitative evaluation, further demonstrating the advantage of deep learning methods in capturing complex visual patterns and preserving fine details.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{method2.png}
+\caption{Segmentation result of Method 2 (SVM).}
+\label{fig:method2_result}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{method3.png}
+\caption{Segmentation result of Method 3 (Random Forest).}
+\label{fig:method3_result}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{method4.png}
+\caption{Segmentation result of Method 4 (U-Net).}
+\label{fig:method4_result}
+\end{figure}
+
 
 \section{Discussion}
 \subsection{Strengths and Weakness}
@@ -228,62 +263,86 @@ The cost of these gains is training time and framework complexity. Method 4 trai
 
 \subsection{Failure analysis }
 \subsubsection{Method 1}
-There are many failure results in Method 1. This part only uses three typical failure cases (sparse, medium and intensive) for analysis. From Fig. 1, 2 and 3, it can be seen that the Actual mask is composed of detailed plant structures, but the Prediction mask is a block area. The soil area near the plant is mixed with the plant area. It can be seen that the area predicted in this method is very different from the actual plant segmentation area, which is consistent with the lower IoU performance (see Table I). It can be seen that this method is difficult to deal with slender plant leaves. This shows that the method can roughly locate the location of the plant, which is consistent with the high Recall performance of this method (see Table I), but the real plant shape cannot be accurately distinguished, which is consistent with the lower precision performance of this method (see Table I).
+There are many failure results in Method 1. This part only uses three typical failure cases (sparse, medium and intensive) for analysis. From failure case 1 to 3 in fig. 1, it can be seen that the Actual mask is composed of detailed plant structures, but the Prediction mask is a block area. The soil area near the plant is mixed with the plant area. It can be seen that the area predicted in this method is very different from the actual plant segmentation area, which is consistent with the lower IoU performance (see Table I). It can be seen that this method is difficult to deal with slender plant leaves. This shows that the method can roughly locate the location of the plant, which is consistent with the high Recall performance of this method (see Table I), but the real plant shape cannot be accurately distinguished, which is consistent with the lower precision performance of this method (see Table I).
 The reason is may to be that the method of Otsu + GrabCut is not enough to accurately identify the shape of the plant, and the method inability to capture the details only reaches the rough segmentation and only finds the position of the plant. And relying on ExG to enhance the color of the plant\cite{exg}, only considering green without considering the specific shape, which may divide the background that are similar to green into the plant area, resulting in errors. At the same time, although removing parts less than min\_area can help improve robustness, it may also lead to the deletion of details, making the result overly rough and causing failure.
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.42\linewidth]{fig1.png}
-    \caption{Typical failure of Method 1.}
-    \label{fig:1}
+\begin{figure}[t]
+\centering
+
+\begin{subfigure}{0.32\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig1.png}
+\caption{Failure case 1}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig2.png}
+\caption{Failure case 2}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig3.png}
+\caption{Failure case 3}
+\end{subfigure}
+
+\caption{Typical failure cases of Method 1}
+\label{fig:method1_failure}
+
 \end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.42\linewidth]{fig2.png}
-    \caption{Typical failure of Method 1.}
-    \label{fig:2}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.42\linewidth]{fig3.png}
-    \caption{Typical failure of Method 1.}
-    \label{fig:3}
-\end{figure}
+
 \subsubsection{Method 2}
-The main failure of Method 2 occur when visual difference between wheat and soil is weak. For example, under shadow, uneven light, or low contrast conditions, plant pixel will lose typical color feature, and become similar to the background, which can lead to some plant area are missed (see Fig. 5). When soil texture and leaves texture looks similarity and Gabor feature may occur same response for foreground and background, which lead to failure.
-Another common problem of Method 2 has limited ability to the small structure and thin boundaries (see Fig. 6). Due to prediction is mainly rely on local feature, thin leaves, narrow edge and unnormal plant area is easily to be broken and lost in the end mask. Robustness experiment indicate that the method is sensitive for dim, noise, low light, low contrast and shadow, because these distortions reduce directly the segmentation ability of color and texture feature. Overall, these failure experiment indicate that the following improvements can consider more robustness feature design, stronger space constraint, or combine handmade feature with deep feature.
-\begin{figure}[H]
+The main failure of Method 2 occur when visual difference between wheat and soil is weak. For example, under shadow, uneven light, or low contrast conditions, plant pixel will lose typical color feature, and become similar to the background, which can lead to some plant area are missed (see Fig. 2 Failure case 1). When soil texture and leaves texture looks similarity and Gabor feature may occur same response for foreground and background, which lead to failure.
+Another common problem of Method 2 has limited ability to the small structure and thin boundaries (see Fig. 2 Failure case 2). Due to prediction is mainly rely on local feature, thin leaves, narrow edge and unnormal plant area is easily to be broken and lost in the end mask. Robustness experiment indicate that the method is sensitive for dim, noise, low light, low contrast and shadow, because these distortions reduce directly the segmentation ability of color and texture feature. Overall, these failure experiment indicate that the following improvements can consider more robustness feature design, stronger space constraint, or combine handmade feature with deep feature.
+\begin{figure}[t]
+\centering
+
+\begin{subfigure}{0.48\linewidth}
     \centering
-    \includegraphics[width=0.42\linewidth]{fig4.png}
-    \caption{Typical failure of Method 2.}
-    \label{fig:4}
-\end{figure}
-\begin{figure}[H]
+    \includegraphics[width=\linewidth]{fig4.png}
+    \caption{Failure case 1}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\linewidth}
     \centering
-    \includegraphics[width=0.42\linewidth]{fig5.png}
-    \caption{Typical failure of Method 2.}
-    \label{fig:5}
+    \includegraphics[width=\linewidth]{fig5.png}
+    \caption{Failure case 2}
+\end{subfigure}
+
+\caption{Typical failure cases of Method 2}
+\label{fig:method2_failure}
+
 \end{figure}
 \subsubsection{Method 3}
-Three failure patterns dominate Method 3. First, thin leaves are fragmented (see Fig. 7). Because the classifier only see a 5 x 5 window, a one or two pixel wide leaf segment can look statistically closer to soil than to plant, and then the connected-component filter (min 100 px) removes what survives. The triple panel visualisations on test scenes show seedling leaves are broken into short disconnected shadow, this is consistent with the low recall rate. Second, shadowed plant area is not segmented (see Fig. 8). Under shadow, the RGB and HSV value of leaves drift to the darker end of the soil distribution, vegetation index collapse, and the local green mean drop — the feature vector therefore cross the Random Forest’s decision boundary, then the pixel is labelled as background. Third, soil area with a green or textured appearance can be classified as plant, because ExG and LBP respond to them in the same way as to young leaves (see Fig. 9). This is a direct result of relying on manual deciding color and texture rather than learned one, and it explains why Method 3’s precision (0.863) is slightly lower than Method 4, although it is still competitive.
+Three failure patterns dominate Method 3. First, thin leaves are fragmented (see Fig. 3 Failure case 1). Because the classifier only see a 5 x 5 window, a one or two pixel wide leaf segment can look statistically closer to soil than to plant, and then the connected-component filter (min 100 px) removes what survives. The triple panel visualisations on test scenes show seedling leaves are broken into short disconnected shadow, this is consistent with the low recall rate. Second, shadowed plant area is not segmented (see Fig. 3 Failure case 2). Under shadow, the RGB and HSV value of leaves drift to the darker end of the soil distribution, vegetation index collapse, and the local green mean drop — the feature vector therefore cross the Random Forest’s decision boundary, then the pixel is labelled as background. Third, soil area with a green or textured appearance can be classified as plant, because ExG and LBP respond to them in the same way as to young leaves (see Fig. 3 Failure case 3). This is a direct result of relying on manual deciding color and texture rather than learned one, and it explains why Method 3’s precision (0.863) is slightly lower than Method 4, although it is still competitive.
 Overall, these failures all trace back to the same basic cause — the missing of global shape information in the feature vector. Post processing can smooth the mask but cannot recover the structure which classifier never see.
-\begin{figure}[H]
+\begin{figure}[t]
+\centering
+
+\begin{subfigure}{0.32\linewidth}
     \centering
-    \includegraphics[width=0.42\linewidth]{fig6.png}
-    \caption{Typical failure of Method 3.}
-    \label{fig:6}
-\end{figure}
-\begin{figure}[H]
+    \includegraphics[width=\linewidth]{fig6.png}
+    \caption{Failure case 1}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\linewidth}
     \centering
-    \includegraphics[width=0.42\linewidth]{fig7.png}
-    \caption{Typical failure of Method 3.}
-    \label{fig:7}
-\end{figure}
-\begin{figure}[H]
+    \includegraphics[width=\linewidth]{fig7.png}
+    \caption{Failure case 2}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\linewidth}
     \centering
-    \includegraphics[width=0.42\linewidth]{fig8.png}
-    \caption{Typical failure of Method 3.}
-    \label{fig:8}
+    \includegraphics[width=\linewidth]{fig8.png}
+    \caption{Failure case 3}
+\end{subfigure}
+
+\caption{Typical failure cases of Method 1}
+\label{fig:method1_failure}
+
 \end{figure}
+
+
 \subsubsection{Method 4}
 Method 4 removes the block shape and over segmentation of Method 1 and the fragmentation of Method 3, but rest of failures still remain. The most common one is on strongly saturated or blurred leaf edges, where the boundary between leaf and soil is only a few pixel wide and is between edges; here the sigmoid probability is around 0.5, and a small change on the threshold will flip the prediction. A second failure mode is on very seedling scene: because soil pixel is taking the most training distribution, the network sometimes collapses to the background class for the most untypical seedlings, even with a Dice loss. A third, less frequent failure is a mild boundary halo — the U-Net lead to predict plant slightly beyond the true leaf edge, which increase false positive at pixel level, but is barely visible. These effects are small and, more importantly, they do not produce the coarse blob mask of Method 1 or the broke thin leaf mask of method 3
 
@@ -296,9 +355,9 @@ In a word, these four methods clearly show the completion process from the simpl
 
 
 \section{Conclusion}
-In this project, we compared four different approaches for wheat segmentation on the EWS dataset, ranging from a traditional image-processing pipeline to supervised machine learning methods and finally to a deep learning model. The results show a clear progression in performance. Method 1 was simple and required no training, but its masks were coarse and inaccurate. Methods 2 and 3 improved segmentation quality by using handcrafted features and supervised classifiers, with Method 3 providing a particularly good balance between accuracy and efficiency. Among all methods, Method 4 achieved the best overall results. Its U-Net architecture was better able to preserve thin structures, handle difficult backgrounds, and recover plant pixels that earlier methods missed.
-At the same time, the comparison also highlights the trade-off between accuracy and cost. The deep learning model gave the strongest performance, but it also required the highest training time, more implementation complexity, and less interpretability than the classical methods. Overall, this project shows that for challenging outdoor wheat segmentation, stronger learned representations lead to better results, especially when the images contain shadows, weak boundaries, and strong background variation.
+In this project, we compared four different way for wheat segmentation on the EWS dataset, ranging from a traditional image-processing pipeline to supervised machine learning methods and finally to a deep learning model. The results show  progression in performance. Method 1 was simple and required no training, but its masks were inaccurate. Methods 2 and 3 improved segmentation quality by using artificial designed features and supervised classifiers, Method 3 providing a good balance between accuracy and efficiency. Among all methods, Method 4 achieved the best results. Its U-Net architecture was able to preserve thin structures, handle difficult backgrounds, and recover the missing plant pixels.  
 
+The comparison also highlights the trade-off between accuracy and cost. The deep learning model gave the strongest performance, but it also required the highest training time, more complexity than the classical methods. Overall, this project shows that for the outdoor wheat segmentation, stronger learned representations lead to better results, when the images have shadows, weak boundaries, and strong background variation.
 
 \begin{thebibliography}{99}
 

@@ -183,6 +183,25 @@ To evaluate performance, we use standard pixel level metrics. There are 4 issues
 For methods 1-3, both mean and standard deviation are reported across the test set. For method 4, only mean value is reported due to the single training. 
 
 \subsection{Quantitative comparison}
+\begin{table*}[t]
+\centering
+\caption{Quantitative Comparison of the Four Methods on the Test Set}
+\label{tab}
+
+\begin{tabular}{lccccc}
+\toprule
+Method & Precision & Recall & F1-score & IoU & Time (s) \\
+\midrule
+Method 1 & $0.494 \pm 0.243$ & $0.718 \pm 0.197$ & $0.548 \pm 0.215$ & $0.406 \pm 0.192$ & 0.456 \\
+Method 2 & $0.718 \pm 0.177$ & $0.857 \pm 0.163$ & $0.771 \pm 0.152$ & $0.650 \pm 0.181$ & 14.790 \\
+Method 3 & $0.863 \pm 0.186$ & $0.710 \pm 0.262$ & $0.757 \pm 0.224$ & $0.651 \pm 0.233$ & 0.093 \\
+Method 4 & 0.847 & 0.822 & 0.823 & 0.719 & 0.015 \\
+\bottomrule
+\end{tabular}
+
+\end{table*}
+
+
 In the quantitative comparison table, there are several observations. 
 Method 4 (U-Net) achieves the best overall performance, with the highest F1 score (0.823) and IoU (0.719), which demonstrate the effectiveness of deep learning for segmentation tasks. 
 Method 3 (RF) achieves competitive performance with significantly lower inference time, making it a strong practical alternative. 

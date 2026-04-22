@@ -47,10 +47,42 @@ Reliable wheat segmentation in outdoor RGB images can be considerd as a binary s
 \subsection{Motivation}  
 Automatic crop segmentation is an important problem in agricultural computer vision because it can be useful in later tasks. It is also useful for comparing different segmentation strategies. In this project, we evaluate traditional image processing, machine learning, and deep learning methods on the same dataset. This allows us to compare their strengths and weaknesses, especially in terms of accuracy, robustness, and efficiency. 
 
+\begin{figure}[t]
+\centering
+
+\subfloat[Sample 1: RGB image]{
+    \includegraphics[width=0.3\columnwidth]{FPWW0180049_RGB1_20170308_113954_6.png}
+}
+\hfill
+\subfloat[Sample 2: RGB image]{
+    \includegraphics[width=0.3\columnwidth]{FPWW0180049_RGB1_20170315_102908_6.png}
+}
+\hfill
+\subfloat[Sample 3: RGB image]{
+    \includegraphics[width=0.3\columnwidth]{FPWW0180049_RGB1_20170329_143149_6.png}
+}
+
+\vspace{0.5em}
+
+\subfloat[Sample 1: Ground-truth mask]{
+    \includegraphics[width=0.3\columnwidth]{FPWW0180049_RGB1_20170308_113954_6_mask.png}
+}
+\hfill
+\subfloat[Sample 2: Ground-truth mask]{
+    \includegraphics[width=0.3\columnwidth]{FPWW0180049_RGB1_20170315_102908_6_mask.png}
+}
+\hfill
+\subfloat[Sample 3: Ground-truth mask]{
+    \includegraphics[width=0.3\columnwidth]{FPWW0180049_RGB1_20170329_143149_6_mask.png}
+}
+
+\caption{Example images from the EWS dataset and their corresponding ground-truth masks. The first row shows RGB field images, and the second row shows the corresponding binary masks.}
+\label{fig:ews_examples}
+\end{figure}
+
 
 \subsection{Dataset overview  }
 This project uses the EWS (Eschikon Wheat Segmentation) dataset. The dataset have 190 RGB field images, each with a resolution of 350 × 350 pixels, with annotated binary masks for plant and background regions. To avoid data leakage, we kept the split unchanged throughout the project. In our implementation, this corresponds to 142 training images, 24 validation images, and 24 test images. The dataset is challenging because the images were captured outdoors and show strong difference in lighting, shadows, wheat density, and soil texture. For this reason, EWS is suitable for evaluating segmentation accuracy and method robustness. 
-
 
 
 \section{Literature Review}

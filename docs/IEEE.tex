@@ -310,7 +310,7 @@ The reason is may to be that the method of Otsu + GrabCut is not enough to accur
 \caption{Failure case 3}
 \end{subfigure}
 
-\caption{Typical failure cases of Method 1}
+\caption{Typical failure cases of Method 1.}
 \label{fig:method1_failure}
 
 \end{figure}
@@ -321,19 +321,19 @@ Another common problem of Method 2 has limited ability to the small structure an
 \begin{figure}[H]
 \centering
 
-\begin{subfigure}{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{fig4.png}
-    \caption{Failure case 1}
+\begin{subfigure}{0.32\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig4.png}
+\caption{Failure case 1}
 \end{subfigure}
-\hfill
-\begin{subfigure}{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{fig5.png}
-    \caption{Failure case 2}
+\hspace{0.04\linewidth}
+\begin{subfigure}{0.32\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig5.png}
+\caption{Failure case 2}
 \end{subfigure}
 
-\caption{Typical failure cases of Method 2}
+\caption{Typical failure cases of Method 2.}
 \label{fig:method2_failure}
 
 \end{figure}
@@ -361,14 +361,14 @@ Overall, these failures all trace back to the same basic cause — the missing o
     \caption{Failure case 3}
 \end{subfigure}
 
-\caption{Typical failure cases of Method 3}
+\caption{Typical failure cases of Method 3.}
 \label{fig:method3_failure}
 
 \end{figure}
 
 
 \subsubsection{Method 4}
-Method 4 removes the block shape and over segmentation of Method 1 and the fragmentation of Method 3, but rest of failures still remain. The most common one is on strongly saturated or blurred leaf edges (see Fig.~\ref{fig:method4_failure} Failure case 1), where the boundary between leaf and soil is only a few pixel wide and is between edges; here the sigmoid probability is around 0.5, and a small change on the threshold will flip the prediction. A second failure mode is on very seedling scene (see Fig.~\ref{fig:method4_failure} Failure case 2): because soil pixel is taking the most training distribution, the network sometimes collapses to the background class for the most untypical seedlings, even with a Dice loss. A third, less frequent failure is a mild boundary halo (see Fig.~\ref{fig:method4_failure} Failure case 3) — the U-Net lead to predict plant slightly beyond the true leaf edge, which increase false positive at pixel level, but is barely visible. These effects are small and, more importantly, they do not produce the coarse blob mask of Method 1 or the broke thin leaf mask of method 3
+Method 4 removes the block shape and over segmentation of Method 1 and the fragmentation of Method 3, but rest of failures still remain. The most common one is on strongly saturated or blurred leaf edges (see Fig.~\ref{fig:method4_failure} Failure case 1), where the boundary between leaf and soil is only a few pixel wide and is between edges; here the sigmoid probability is around 0.5, and a small change on the threshold will flip the prediction. A second failure mode is on very seedling scene (see Fig.~\ref{fig:method4_failure} Failure case 2): because soil pixel is taking the most training distribution, the network sometimes collapses to the background class for the most untypical seedlings, even with a Dice loss. A third, less frequent failure is a mild boundary halo (see Fig.~\ref{fig:method4_failure} Failure case 3) — the U-Net lead to predict plant slightly beyond the true leaf edge, which increase false positive at pixel level, but is barely visible. These effects are small and, more importantly, they do not produce the coarse blob mask of Method 1 or the broke thin leaf mask of method 3.
 \begin{figure}[H]
 \centering
 
@@ -390,7 +390,7 @@ Method 4 removes the block shape and over segmentation of Method 1 and the fragm
     \caption{Failure case 3}
 \end{subfigure}
 
-\caption{Typical failure cases of Method 4}
+\caption{Typical failure cases of Method 4.}
 \label{fig:method4_failure}
 
 \end{figure}

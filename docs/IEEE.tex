@@ -368,8 +368,32 @@ Overall, these failures all trace back to the same basic cause — the missing o
 
 
 \subsubsection{Method 4}
-Method 4 removes the block shape and over segmentation of Method 1 and the fragmentation of Method 3, but rest of failures still remain. The most common one is on strongly saturated or blurred leaf edges, where the boundary between leaf and soil is only a few pixel wide and is between edges; here the sigmoid probability is around 0.5, and a small change on the threshold will flip the prediction. A second failure mode is on very seedling scene: because soil pixel is taking the most training distribution, the network sometimes collapses to the background class for the most untypical seedlings, even with a Dice loss. A third, less frequent failure is a mild boundary halo — the U-Net lead to predict plant slightly beyond the true leaf edge, which increase false positive at pixel level, but is barely visible. These effects are small and, more importantly, they do not produce the coarse blob mask of Method 1 or the broke thin leaf mask of method 3
+Method 4 removes the block shape and over segmentation of Method 1 and the fragmentation of Method 3, but rest of failures still remain. The most common one is on strongly saturated or blurred leaf edges(see Fig.~\ref{fig:method4_failure} Failure case 1), where the boundary between leaf and soil is only a few pixel wide and is between edges; here the sigmoid probability is around 0.5, and a small change on the threshold will flip the prediction. A second failure mode is on very seedling scene (see Fig.~\ref{fig:method4_failure} Failure case 2): because soil pixel is taking the most training distribution, the network sometimes collapses to the background class for the most untypical seedlings, even with a Dice loss. A third, less frequent failure is a mild boundary halo (see Fig.~\ref{fig:method4_failure} Failure case 3) — the U-Net lead to predict plant slightly beyond the true leaf edge, which increase false positive at pixel level, but is barely visible. These effects are small and, more importantly, they do not produce the coarse blob mask of Method 1 or the broke thin leaf mask of method 3
+\begin{figure}[H]
+\centering
 
+\begin{subfigure}{0.32\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig9.png}
+    \caption{Failure case 1}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig10.png}
+    \caption{Failure case 2}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig11.png}
+    \caption{Failure case 3}
+\end{subfigure}
+
+\caption{Typical failure cases of Method 4}
+\label{fig:method4_failure}
+
+\end{figure}
 \subsection{Comparison across methods}
 Based on the above three methods, we can make a comparison between methods.
 First of all, Method 1 is traditional and the simplest method. Its advantages are low cost, fast running speed, and no need to train the model. Although it can roughly locate the area where the plant is located, the results are too rough to get the true boundaries of the plant, and the robustness of light and color is weak, and the overall effect is poor. It is only suitable for limited resources and does not pursue accuracy. Method 2 models plant segmentation into a pixel classification problem, and combines color, texture and spatial information, and uses a variety of manual features to distinguish between plants and backgrounds, so it is more accurate and flexible than Method 1, and has stronger robustness to colors. However, Method 2 mainly relies on manual features and local pixel information, which will be affected by the different situations and still cannot accurately handle plant boundaries \cite{survey}. Therefore, Method 3 further considers local statistical characteristics and multi-scale textures on the basis of Method 2. And Random Forest is used as a classifier, and uses RGB, HSV, ExG, ExR, ExG-ExR, green channel local mean and standard deviation, Gaussian blur and LBP texture characteristics to improve stability and robustness, and reduce the influence of light, noise and shadow to a certain extent. It takes a long time to obtain more accurate results, which is the best of the three methods.

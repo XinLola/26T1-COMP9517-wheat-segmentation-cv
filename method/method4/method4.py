@@ -1,6 +1,7 @@
 import json
 import time
 import cv2
+import csv
 import numpy as np
 import argparse
 from pathlib import Path
@@ -80,6 +81,48 @@ def visuals(img_bgr: np.ndarray, pred_mask: np.ndarray, gt_mask: np.ndarray) -> 
 
     result = np.hstack(combined)
     return cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
+
+
+def _failure_reason(metric: dict) -> str:
+    p = float(metric["precision"])
+    r = float(metric["recall"])
+    iou = float(metric["iou"])
+    if r < 0.55 and p >= 0.70:
+        return "Under-segmentation: U-Net failed to capture all plant regions, likely due to challenging boundary conditions."
+    if p < 0.55 and r >= 0.70:
+        return "Over-segmentation: U-Net over-predicted plant areas, possibly confusing textured soil with vegetation."
+    if iou < 0.40 and abs(p - r) < 0.15:
+        return "Total confusion: U-Net activation maps severely misaligned; model needs better feature learning."
+    return "Complex failure: U-Net struggled with this image's spatial or color distribution characteristics."
+
+
+def _save_failure_overlay(image_bgr: np.ndarray, pred: np.ndarray, gt: np.ndarray, out_path: Path) -> None:
+    base = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    pred_b = pred > 0
+    gt_b = gt == 0
+
+    overlay = base.copy()
+    fp = np.logical_and(pred_b, np.logical_not(gt_b))
+    fn = np.logical_and(np.logical_not(pred_b), gt_b)
+    tp = np.logical_and(pred_b, gt_b)
+
+    overlay[tp] = 0.6 * overlay[tp] + 0.4 * np.asarray([1.0, 1.0, 0.0], dtype=np.float32)
+    overlay[fp] = 0.5 * overlay[fp] + 0.5 * np.asarray([1.0, 0.0, 0.0], dtype=np.float32)
+    overlay[fn] = 0.5 * overlay[fn] + 0.5 * np.asarray([0.0, 1.0, 0.0], dtype=np.float32)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(out_path), cv2.cvtColor((overlay * 255.0).astype(np.uint8), cv2.COLOR_RGB2BGR))
+
+
+def _write_csv(path: Path, rows: list) -> None:
+    if not rows:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    keys = list(rows[0].keys())
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 
@@ -350,14 +393,21 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
     masks_dir.mkdir(parents=True, exist_ok=True)
     visuals_dir.mkdir(parents=True, exist_ok=True)
 
-    train_start = time.perf_counter()
-    model, device = train_unet(train_dir, val_dir,
-                               epochs=epochs, batch_size=batch_size, lr=lr)
-    train_time = time.perf_counter() - train_start
-    print(f"\nTotal training time: {train_time:.2f} seconds")
-
-    torch.save(model.state_dict(), str(model_path))
-    print(f"Model saved to {model_path}")
+    if model_path.exists():
+        print(f"Loading existing model from {model_path}")
+        device = ("cuda" if torch.cuda.is_available()
+                  else ("mps" if torch.backends.mps.is_available() else "cpu"))
+        model = UNet(in_ch=3, out_ch=1, base=32).to(device)
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        train_time = 0.0
+    else:
+        train_start = time.perf_counter()
+        model, device = train_unet(train_dir, val_dir,
+                                   epochs=epochs, batch_size=batch_size, lr=lr)
+        train_time = time.perf_counter() - train_start
+        print(f"\nTotal training time: {train_time:.2f} seconds")
+        torch.save(model.state_dict(), str(model_path))
+        print(f"Model saved to {model_path}")
 
     # ---- Testing ----
     print("\n************** Testing Phase **************")
@@ -366,6 +416,8 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
 
     results = []
     total_predict_time = 0.0
+    failure_dir = output_root / "failure_cases"
+    failure_dir.mkdir(parents=True, exist_ok=True)
 
     for img_path, gt_path in test_pairs:
         img_bgr = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
@@ -389,12 +441,42 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
 
         results.append({
             "image_name": img_path.name,
+            "sample_id": img_path.stem,
             "predict_time": elapsed,
+            "img_bgr": img_bgr,
+            "pred_mask": pred_mask,
+            "gt_mask": gt_mask,
             **metrics,
         })
 
         print(f"  {img_path.name}: F1={metrics['f1']:.4f}, "
               f"IoU={metrics['iou']:.4f}, Time={elapsed:.3f}s")
+
+    # Generate failure analysis for 5 worst cases
+    print("\n[INFO] Generating failure analysis artifacts ...")
+    worst = sorted(results, key=lambda x: x["iou"])[:5]
+    failure_lines = [
+        "# Failure Analysis (Method 4 - U-Net)",
+        "",
+        "| sample_id | precision | recall | f1 | iou | reason |",
+        "|---|---:|---:|---:|---:|---|",
+    ]
+
+    for item in worst:
+        _save_failure_overlay(
+            item["img_bgr"], item["pred_mask"], item["gt_mask"],
+            failure_dir / f"{item['sample_id']}.png"
+        )
+        reason = _failure_reason(item)
+        failure_lines.append(
+            f"| {item['sample_id']} | {item['precision']:.4f} | {item['recall']:.4f} | {item['f1']:.4f} | {item['iou']:.4f} | {reason} |"
+        )
+
+    (output_root / "failure_analysis.md").write_text("\n".join(failure_lines), encoding="utf-8")
+
+    # Clean up image data from results to reduce memory usage
+    for r in results:
+        del r["img_bgr"], r["pred_mask"], r["gt_mask"]
 
     summary = {
         "method": "Method 4 (Deep Learning: U-Net)",
@@ -433,11 +515,11 @@ def main(train_dir: Path, val_dir: Path, test_dir: Path, output_root: Path,
         json.dump(summary, f, indent=2)
 
     print(f"\n=== Results Summary ===")
-    print(f"  Average Precision: {summary['metrics']['precision']:.4f}")
-    print(f"  Average Recall:    {summary['metrics']['recall']:.4f}")
-    print(f"  Average F1:        {summary['metrics']['f1']:.4f}")
-    print(f"  Average IoU:       {summary['metrics']['iou']:.4f}")
-    print(f"  Avg predict time:  {summary['metrics']['average_predict_time_per_image']:.3f}s")
+    print(f"  Average Precision:{summary['test']['baseline']['precision_mean']:.4f}")
+    print(f"  Average Recall:{summary['test']['baseline']['recall_mean']:.4f}")
+    print(f"  Average F1: {summary['test']['baseline']['f1_mean']:.4f}")
+    print(f"  Average IoU:{summary['test']['baseline']['iou_mean']:.4f}")
+    print(f"  Avg predict time:{summary['test']['baseline']['test_time_mean_sec']:.3f}s")
     print(f"\nResults saved to {output_root}")
 
 
